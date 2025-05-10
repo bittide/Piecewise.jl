@@ -37,16 +37,18 @@ Struct for right continuous piecewise constant functions.
 These functions are defined for t in [x[1], x[end])
 They do NOT include the endpoint. 
 """
-struct PiecewiseConstant <: Series
-    x
-    y
-    function PiecewiseConstant(x,y)
+struct PiecewiseConstant{T <: Real} <: Series
+    x::Vector{Float64}
+    y::Vector{T}
+    function PiecewiseConstant{T}(x,y) where {T<:Real} 
         # enforce invariants
         @assert is_increasing(x) "Error: in PiecewiseConstant, x must be increasing."
         @assert length(x) == length(y) + 1  "Error: in PiecewiseConstant, length(x) must equal length(y) + 1"
         return new(x,y)
     end
 end
+
+PiecewiseConstant(x,y) = PiecewiseConstant{Float64}(x,y)
 
 
 
@@ -165,6 +167,7 @@ tuples(p::Missing) = missing
 #    push!(p.y, b)
 # end
 
+#tuples(plist::Array{T}) where T <: Series = tuples.(plist)
 
 
 ##############################################################################
@@ -206,9 +209,6 @@ function interpolate(x::Vector, y::Vector, t)
     if x[i] == t
         return y[i]
     end
-    if i == length(x)
-        println("x[end] = ", x[end])
-    end
     @assert i != length(x)
     return interpolate(x[i], y[i], x[i+1], y[i+1], t)
 end
@@ -244,9 +244,6 @@ function interpolate_with_guess(x::Vector{Float64}, y::Vector{Float64}, t, guess
     i = search_sorted_backwards(x, t, guess)
     if x[i] == t
         return y[i]
-    end
-    if i == length(x)
-        println("x[end] = ", x[end])
     end
     return interpolate(x[i], y[i], x[i+1], y[i+1], t)
 end
@@ -292,24 +289,6 @@ function tuples(p::PiecewiseConstant)
 end
 
 
-#function xy(p::PiecewiseConstant)
-#    x = Float64[]
-#    y = Float64[]
-#    function pt(a,b)
-#        push!(x, a)
-#        push!(y, b)
-#    end
-#    for i=1:length(p.y)
-#        pt(p.x[i],   p.y[i])
-#        pt(p.x[i+1], p.y[i])
-#    end
-#    return x, y
-#end
-
-# the points x,y where f(x)=y but f is discontinuous
-# function discontinuities(p::PiecewiseConstant)
-#    return p.x[1:end-1], p.y
-# end
 
     
 ##############################################################################
@@ -462,7 +441,8 @@ function Base.:+(p::PiecewiseConstant, q::PiecewiseConstant)
     xn = unique(sort([p.x; q.x]))
     xn = [a for a in xn if xmin <= a <= xmax]
     n = length(xn)
-    yn = zeros(n)
+    T = typeof(p.y[1] + q.y[1])
+    yn = zeros(T, n)
     pind = 1
     qind = 1
     for i=1:n-1
@@ -470,13 +450,14 @@ function Base.:+(p::PiecewiseConstant, q::PiecewiseConstant)
         qv, qind = evaluate_with_lower_bound(q, xn[i], qind)
         yn[i] = pv + qv
     end
-    return PiecewiseConstant(xn,yn[1:end-1])
+    return PiecewiseConstant{T}(xn,yn[1:end-1])
 end
 
 function Base.:+(p::PiecewiseConstant, a::Number)
     xn = copy(p.x)
     yn = p.y .+ a
-    return PiecewiseConstant(xn,yn)
+    T = typeof(yn[1])
+    return PiecewiseConstant{T}(xn,yn)
 end
 Base.:+(a::Number, p::PiecewiseConstant) = p + a
 Base.:-(p::PiecewiseConstant, q::PiecewiseConstant) =  p  + ((-1) * q)
@@ -486,6 +467,91 @@ Base.:+(p::Samples, a::Number) = Samples(p.x, p.y .+ a)
 Base.:+(a::Number, p::Samples) = p+a
 Base.:-(p::Samples, a::Number) = Samples(p.x, p.y .- a)
 Base.:-(a::Number, p::Samples) = Samples(p.x, a .- p.y)
+
+
+
+"""
+   find_next_val(p::PiecewiseConstant, t0, val)
+
+Find the smallest t >= t0 at which p(t) = val
+"""
+function find_next_val(p::PiecewiseConstant, t0, val)
+    i = findfirst(a -> a >= t0, p.x)
+    @assert !isnothing(i) "attempted to find_next_val PiecewiseConstant() for t0 too large."
+    @assert p.x[1] <= t0   "attempted to find_next_val PiecewiseConstant() for t0 too small."
+    if i == length(p.x) && p.x[i] == t0
+        error("attempted to find_next_val PiecewiseConstant() for t0 at right hand endpoint.")
+    end
+    if p.x[i] > t0
+        if p.y[i-1] == val
+            return t0
+        end
+    end
+    j = findnext(a -> a == val, p.y, i)
+    if isnothing(j)
+        error("At no time after t0 does PiecewiseConstant = val")
+    end
+    return p.x[j]
+end
+
+
+#
+#
+# given a vector x, find i >= i0 such taht x[i] == val1 and x[i+1] == val2
+function find_pair(x, i0, val1, val2)
+    i = i0
+    l = length(x)
+    if i0 < 1
+        i0 = 1
+    end
+    if i0 > l-1
+        return nothing
+    end
+    while true
+        if x[i] == val1 && x[i+1] == val2
+            return i
+        end
+        if i == l-1
+            break
+        end
+        i = i + 1
+    end
+    return nothing
+end
+
+#
+# f = PiecewiseConstant means
+#
+#    at f.x[i],  f changes from f.y[i-1] to f.y[i]
+#
+
+"""
+   find_next_change_values(p::PiecewiseConstant, t0, val1, val2)
+
+Find the smallest t >= t0 at which p(t-) = val1 and p(t) = val2
+"""
+function find_next_change_values(p::PiecewiseConstant, t0, val1, val2)
+    i = findfirst(a -> a >= t0, p.x)
+    if isnothing(i)
+        println("Error")
+        println((;t0, val1, val2))
+    end
+    @assert !isnothing(i) "attempted to find_next_val PiecewiseConstant() for t0 too large."
+    @assert p.x[1] <= t0   "attempted to find_next_val PiecewiseConstant() for t0 too small."
+    if i == 1
+        i = 2
+    end
+    if i == length(p.x) && p.x[i] == t0
+        return Inf
+    end
+    j = find_pair(p.y, i-1, val1, val2)
+    if isnothing(j)
+        return Inf
+    end
+    return p.x[j+1]
+end
+
+
 
 
 ##############################################################################
