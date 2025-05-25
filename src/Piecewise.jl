@@ -405,6 +405,28 @@ end
 
 
 """
+    extend_dx_dy(p::PiecewiseLinear, dx, dy)
+
+Extend a piecewise linear function.
+"""
+@inline function extend_dx_dy(p::PiecewiseLinear, dx, dy)
+    push!(p.x, p.x[end] + dx)
+    push!(p.y, p.y[end] + dy)
+end
+
+"""
+    extend_absx_dy(p::PiecewiseLinear, x, dy)
+
+Extend a piecewise linear function.
+"""
+@inline function extend_absx_dy(p::PiecewiseLinear, x, dy)
+    push!(p.x, x)
+    push!(p.y, p.y[end] + dy)
+end
+
+
+
+"""
     floor(p::PiecewiseLinear)
 
 Return a PiecewiseConstant function equal to the floor of p.
@@ -752,7 +774,7 @@ end
 
 
 ##############################################################################
-
+# MARK: math
 
 squarex(p::T) where {T<:Series} =  T(p.x, p.y .* p.y)
 square(p::Samples) =  squarex(p)
@@ -809,7 +831,7 @@ end
 
 
 ##############################################################################
-
+# MARK: before/after
 
 """
     after(p::PiecewiseConstant, t)
@@ -899,7 +921,7 @@ end
 
 
 ##############################################################################
-# definite integral
+# MARK: calculus
 
 
 """
