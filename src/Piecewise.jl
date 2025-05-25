@@ -15,7 +15,7 @@
 module Piecewise
 
 
-export PiecewiseConstant, PiecewiseLinear, Series, Samples,
+export PiecewiseConstant, PiecewiseLinear, Series, SeriesList, Samples,
     integer_crossings, evaluate, differentiate,  delay, integrate, after,
     before, IntegersBetween, stairs, tuples
 
@@ -26,6 +26,10 @@ export crossing, invert, discontinuities, square, l2norm,
 
 abstract type Series end
 
+
+mutable struct SeriesList
+    series::Vector{Series}
+end 
 
 """
     PiecewiseConstant(x,y)
@@ -791,6 +795,17 @@ function Base.:+(p::PiecewiseLinear, q::PiecewiseLinear)
 end
 
 
+##############################################################################
+
+
+function after(p::Samples, t)
+    @assert t <= p.x[end]  "Error: attempted to truncate p at too late a time"
+    # The above assertion means that the findfirst call will return an integer
+    i = findfirst(>=(t), p.x)
+    return Samples(p.x[i:end], p.y[i:end])
+end
+
+
 
 
 ##############################################################################
@@ -844,14 +859,13 @@ end
 
 Given p defined on interval [a,b].
 Return q equal to p restricted to the interval [ a, min(b,t) ]
-Requires t > a.
+Requires t >= a.
 """
 function before(p::Samples, t)
-    @assert t > p.x[1] "Error: attempted to truncate p at too early a time"
-    i = findlast(a -> a <= t, p.x)
+    @assert t >= p.x[1] "Error: attempted to truncate p at too early a time"
+    i = findlast(<=(t), p.x)
     return Samples(p.x[1:i], p.y[1:i])
 end
-
 
 
 """
