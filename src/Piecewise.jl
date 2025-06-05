@@ -29,7 +29,7 @@ abstract type Series end
 
 mutable struct SeriesList
     series::Vector{Series}
-end 
+end
 
 """
     PiecewiseConstant(x,y)
@@ -39,12 +39,12 @@ Struct for right continuous piecewise constant functions.
    f(t) = y[i] for t in [ x[i], x[i+1] )
 
 These functions are defined for t in [x[1], x[end])
-They do NOT include the endpoint. 
+They do NOT include the endpoint.
 """
 struct PiecewiseConstant{T <: Real} <: Series
     x::Vector{Float64}
     y::Vector{T}
-    function PiecewiseConstant{T}(x,y) where {T<:Real} 
+    function PiecewiseConstant{T}(x,y) where {T<:Real}
         # enforce invariants
         @assert is_increasing(x) "Error: in PiecewiseConstant, x must be increasing."
         @assert length(x) == length(y) + 1  "Error: in PiecewiseConstant, length(x) must equal length(y) + 1"
@@ -60,7 +60,7 @@ PiecewiseConstant(x,y) = PiecewiseConstant{Float64}(x,y)
 
 # piecewise linear function
 #
-#   theta(times[i]) = phase[i]   
+#   theta(times[i]) = phase[i]
 #
 # linear interpolation between points
 #
@@ -111,9 +111,9 @@ end
 # Base.maximum(p::Series) = maximum(p.y)
 # Base.minimum(p::Series) = minimum(p.y)
 
-# 
-# 
-# function limits(p::Series) 
+#
+#
+# function limits(p::Series)
 #     xmin = minimum(p.x)
 #     xmax = maximum(p.x)
 #     ymin = minimum(p.y)
@@ -129,8 +129,8 @@ end
 #    return xmin, xmax, ymin, ymax
 #end
 
-# 
-# # p is an array 
+#
+# # p is an array
 # function limits(p::Array)
 #     lims = Any[]
 #     for ind in eachindex(skipmissing(p))
@@ -142,7 +142,7 @@ end
 #     ymax = maximum(a[4] for a in lims)
 #     return xmin, xmax, ymin, ymax
 # end
-# 
+#
 
 
 """
@@ -165,7 +165,7 @@ tuples(p::Missing) = missing
 
 # xmax(p::Series) = p.x[end]
 
-# 
+#
 # function Base.push!(p::Series, a, b)
 #     push!(p.x, a)
 #    push!(p.y, b)
@@ -226,8 +226,29 @@ invert(p::PiecewiseLinear, w)::Float64  = interpolate(p.y, p.x, w)
 
 #
 # Here (length(x) - guess) is an upper bound on the smallest index i
-# which which x[i] >= t.  
+# which which x[i] >= t.
 #
+
+
+"""
+    search_sorted_backwards(x::Vector{Float64}, t::Float64, guess::Int64)
+
+Find the largest index `i` such that `x[i] <= t` in a sorted vector `x`.
+
+This function is similar to `searchsortedlast` but potentially more efficient if
+an approximate location of `t` within `x` is known.
+
+# Arguments
+- `x::Vector{Float64}`: A sorted vector of floating-point numbers.
+- `t::Float64`:     The value to search for.
+- `guess::Int64`:   The number of elements to skip from the end of `x` when starting
+                    the search.  A larger `guess` allows for a faster
+                    search.
+
+# Returns
+- `i::Int64`: The largest index `i` such that `x[i] <= t`. Returns 0 if all
+   elements of `x` are greater than `t`.
+"""
 function search_sorted_backwards(x::Vector{Float64}, t::Float64, guess::Int64)
     ub = length(x) - guess
     if ub < 1 || x[ub] < t
@@ -240,6 +261,7 @@ function search_sorted_backwards(x::Vector{Float64}, t::Float64, guess::Int64)
     end
     return 0
 end
+
 
 #
 # Here guess is a bound as in search_sorted_backwards
@@ -273,7 +295,7 @@ function  evaluate_with_lower_bound(p::PiecewiseLinear, t,  i0)
     if p.x[i] == t
         return p.y[i], i
     end
-    return interpolate(p.x[i-1], p.y[i-1], p.x[i], p.y[i], t), i 
+    return interpolate(p.x[i-1], p.y[i-1], p.x[i], p.y[i], t), i
 end
 
 
@@ -294,7 +316,7 @@ end
 
 
 
-    
+
 ##############################################################################
 
 # find integers i in the interval (xmin, xmax]
@@ -718,13 +740,13 @@ end
 
 Return p(t). Note that by definition, p is defined
 on an interval [a,b), where the right-hand end
-of the interval is open. 
+of the interval is open.
 """
 function evaluate(p::PiecewiseConstant, t)
     i = findfirst(a -> a >= t, p.x)
     @assert !isnothing(i) "attempted to evaluate PiecewiseConstant(x) for x too large."
     @assert p.x[1] <= t   "attempted to evaluate PiecewiseConstant(x) for x too small."
-    if i == length(p.x) && p.x[i] == t 
+    if i == length(p.x) && p.x[i] == t
         error("attempted to evaluate PiecewiseConstant(x) for x at right hand endpoint.")
     end
     if p.x[i] == t
@@ -732,12 +754,12 @@ function evaluate(p::PiecewiseConstant, t)
     end
     if i == 1
         println("Error: attempted to evaluate p at too early a time")
-        return 
+        return
     end
     return p.y[i-1]
 end
 
-# 
+#
 # function evaluate(p::PiecewiseConstant, t, allowrhend = false)
 #     i = findfirst(a -> a >= t, p.x)
 #     @assert !isnothing(i) "attempted to evaluate PiecewiseConstant(x) for x too large."
@@ -750,12 +772,12 @@ end
 #     end
 #     if i == 1
 #         println("Error: attempted to evaluate p at too early a time")
-#         return 
+#         return
 #     end
 #     return p.y[i-1]
 # end
-# 
-# 
+#
+#
 
 (p::PiecewiseConstant)(t) =  evaluate(p, t)
 
@@ -790,7 +812,7 @@ l2norm(p::Array{T,1}) where {T<:Series} = sum(l2norm.(p))
 # relative_l2norm(p::Series) = l2norm(remove_steady_state(p))
 # export l2norm, steady_state, remove_steady_state, relative_l2norm
 # l2norm(p::Series, offset) = l2norm(p .- offset)
-    
+
 Base.:*(a::Number, pwc::PiecewiseLinear) = PiecewiseLinear(pwc.x, pwc.y*a)
 Base.:*(a::Number, p::Samples) = Samples(p.x, p.y*a)
 Base.:+(p::PiecewiseLinear, a::Number) = PiecewiseLinear(copy(p.x), p.y .+ a)
@@ -903,7 +925,7 @@ function is_nondecreasing(x)
     end
     return true
 end
-    
+
 
 """
     is_increasing(x)
