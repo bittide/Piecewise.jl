@@ -15,13 +15,11 @@
 module Piecewise
 
 
-export after, before, crossing, definite_integral, delay, differentiate,
-    discontinuities, evaluate, extend_absx_dy,
-    extend_dx_dy, find_next_change_values, integer_crossings,
-    integer_crossings_in_interval,
-    IntegersBetween, integrate, invert,
-    l2norm, PiecewiseConstant, PiecewiseLinear,
-    Samples, Series, SeriesList, square, stairs, tuples
+export after, before, crossing, definite_integral, delay, differentiate, discontinuities,
+       evaluate, evaluate_with_guess, evaluate_with_lower_bound, extend_absx_dy, extend_dx_dy,
+       find_next_change_values, integer_crossings, integer_crossings_in_interval,
+       IntegersBetween, integrate, invert, invert_with_guess, l2norm, PiecewiseConstant,
+       PiecewiseLinear, Samples, Series, SeriesList, square, stairs, tuples
 
 abstract type Series end
 
