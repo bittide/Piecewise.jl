@@ -16,7 +16,8 @@ module Piecewise
 
 
 export after, before, crossing, definite_integral, delay, differentiate,
-    discontinuities, evaluate, extend_dx_dy, find_next_change_values, integer_crossings,
+    discontinuities, evaluate, extend_absx_dy,
+    extend_dx_dy, find_next_change_values, integer_crossings,
     integer_crossings_in_interval,
     IntegersBetween, integrate, invert,
     l2norm, PiecewiseConstant, PiecewiseLinear,
