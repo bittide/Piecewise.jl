@@ -15,11 +15,12 @@
 module Piecewise
 
 
-export after, before, crossing, definite_integral, delay, differentiate, discontinuities,
-       evaluate, evaluate_with_guess, evaluate_with_lower_bound, extend_absx_dy, extend_dx_dy,
-       find_next_change_values, integer_crossings, integer_crossings_in_interval,
-       IntegersBetween, integrate, invert, invert_with_guess, l2norm, PiecewiseConstant,
-       PiecewiseLinear, Samples, Series, SeriesList, square, stairs, tuples
+export after, alternating, before, crossing, definite_integral, delay, differentiate,
+       discontinuities, evaluate, evaluate_with_guess, evaluate_with_lower_bound,
+       extend_absx_dy, extend_dx_dy, find_next_change_values, integer_crossings,
+       integer_crossings_in_interval, IntegersBetween, integrate, invert, invert_with_guess,
+       l2norm, PiecewiseConstant, PiecewiseLinear, Samples, Series, SeriesList, square, stairs,
+       tuples
 
 abstract type Series end
 
@@ -596,6 +597,20 @@ function find_next_change_values(p::PiecewiseConstant, t0, val1, val2)
     return p.x[j+1]
 end
 
+
+# return altenating up-down sequence starting at down
+function alternating(x)
+    n = length(x)
+    if isodd(n)
+        m = (n - 1) >> 1
+        y = repeat([0, 1], m)
+        return PiecewiseConstant{Int64}(x, y)
+    end
+    m = (n - 2) >> 1
+    y = repeat([0, 1], m)
+    push!(y, 0)
+    return PiecewiseConstant{Int64}(x, y)
+end
 
 
 
